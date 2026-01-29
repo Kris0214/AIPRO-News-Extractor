@@ -1,0 +1,42 @@
+# AIPRO News Processing Configuration
+
+# 資料庫配置
+database:
+  host: "sndmp-scan.fbs100.campus"
+  port: "5211"
+  service_name: "SNDMP_USER_DS"
+  oracle_client_path: "D:\\Kris\\AIPRO_news\\instantclient-23.26"
+
+# Azure OpenAI 配置
+azure_openai:
+  api_version: "2024-12-01-preview"
+  endpoint: "https://oai-ftw-jpe-sit-sandbox-01.openai.azure.com/"
+  model: "gpt-4o"
+  max_tokens: 5000
+  temperature: 0.1
+
+# 新聞處理配置
+news:
+  excluded_keywords:
+    - "NO300011"
+    - "經濟日報"
+  included_types:
+    - "科技脈動"
+    - "產業情報"
+    - "國際股市"
+    - "頭條新聞"
+    - "研究報告"
+  num_workers: 8  # 並行處理的線程數
+  timeout: 60  # 單個請求超時時間（秒）
+
+# 路徑配置
+paths:
+  data_dir: "./data"
+  logs_dir: "./logs"
+  data_spec_dir: "./data_spec"
+
+# 日誌配置
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_prefix: "aipro_news"
