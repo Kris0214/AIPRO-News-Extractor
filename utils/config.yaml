@@ -1,0 +1,20 @@
+PROJECT_AIPRO_AI_DEV:
+  os_path: 'C:\Users\summer.cc.chen\Desktop\統計專案\1.自主重要開發備份\aipro_ai_development'
+  today: null
+  subject_keyword: '富邦投顧'
+  ods_account: ''
+  ods_password: ''
+  pass_website:
+    - "azure"
+    - "azure.core"
+    - "azure.core.pipeline"
+    - "azure.core.pipeline.policies.http_logging_policy"
+    - "openai"
+    - "openai.api_requestor"
+    - "httpx"
+    - "urllib3"
+  aoai_api_version: '2024-12-01-preview'
+  aoai_endpoint: 'https://oai-ftw-jpe-sit-sandbox-01.openai.azure.com/'
+  aoai_api_key: '657k4L2cVfjrr1OfRifY6Z2UC0DWsDnoy44CZOfTc1OYMFBXHBQlJQQJ99BIACi0881XJ3w3AAABACOGwJMl'
+  daliy_batch_news_date: null
+  daliy_batch_houseview_date: null
