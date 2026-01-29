@@ -111,11 +111,8 @@ df_reports = report_service.process_daily_reports(date_bgn, date_end)
 
 修改 `src/llm_service.py` 中的 `extract_stock_info()` 和 `summarize_news()` 方法。
 
-## 📞 聯絡資訊
-
-開發者：數據科學部 陳君綺  
-Email: summer.cc.chen@fubon.com
 
 ## 📄 授權
 
 內部專案，僅供富邦內部使用。
+
