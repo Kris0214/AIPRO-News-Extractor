@@ -1,118 +1,154 @@
-# AIPRO 新聞處理系統
+# AIPRO News Extraction System
 
-自動化處理嘉實新聞資料，提取股票標的並生成摘要。
+Automated system for processing financial news data, extracting stock targets, and generating summaries using Azure OpenAI GPT-4o.
 
-## 📁 專案結構
+## Project Structure
 
 ```
-AIPRO_news/
+AIPRO-News-Extractor/
 ├── config/
-│   ├── config.yaml          # 主配置檔
-│   ├── .env                 # 環境變數（帳密）
-│   └── .env.example         # 環境變數範例
+│   ├── config.yaml          # Main configuration file
+│   └── .env                 # Environment variables 
 ├── src/
-│   ├── database.py          # 資料庫操作
-│   ├── llm_service.py       # LLM 服務封裝
-│   ├── news_service.py      # 新聞處理邏輯
-│   └── utils.py             # 工具函數
-├── src/
-
-
-
-
-├── data/                    # 輸出資料目錄
-├── logs/                    # 日誌目錄
-├── main.py                  # 主程式入口
-├── requirements.txt         # 依賴套件
-└── README.md               # 本文件
+│   ├── __init__.py
+│   ├── database.py          # Database operations and connection management
+│   ├── llm_service.py       # LLM service wrapper for Azure OpenAI
+│   └── news_service.py      # News processing and parallel execution logic
+├── utils/
+│   ├── utils.py             # Utility functions (logging, config, date handling)
+│   └── ...                  # Other utility scripts
+├── prompts/
+│   ├── extract_stock_target.txt      # Prompt template for stock extraction
+│   ├── summarize_news.txt            # Prompt template for news summarization
+│   ├── system_financial_tagger.txt   # System prompt for financial tagging
+│   └── README.md                     # Prompt documentation
+├── queries/
+│   └── fetch_news.txt       # SQL query template for fetching news
+├── instantclient/           # Oracle Instant Client (Depend on version you need)
+├── data/                    # Output data directory
+├── logs/                    # Log files directory
+├── main.py                  # Main entry point
+├── requirements.txt         # Python dependencies
+└── README.md               # This file
 ```
 
-## 🚀 快速開始
+## Quick Start
 
-### 1. 環境設定
+### 1. Environment Setup
 
 ```powershell
-# 建立虛擬環境
+# Create virtual environment
 python -m venv .venv
 
-# 啟動虛擬環境
+# Activate virtual environment (Windows PowerShell)
 .\.venv\Scripts\Activate.ps1
 
-# 安裝依賴
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. 配置設定
+### 2. Configuration
 
-複製環境變數範例檔並填入實際的帳號密碼：
+Create `.env` file in `config/` directory:
 
-```powershell
-cp config\.env.example config\.env
+```bash
+# config/.env
+ODS_ACCOUNT=your_oracle_username
+ODS_PASSWORD=your_oracle_password
+AOAI_API_KEY=your_azure_openai_api_key
 ```
 
-編輯 `config\.env` 填入：
-- `ODS_ACCOUNT`: Oracle 資料庫帳號
-- `ODS_PASSWORD`: Oracle 資料庫密碼
-- `AOAI_API_KEY`: Azure OpenAI API 金鑰
+Edit `config/config.yaml` if needed to adjust:
+- Database connection settings
+- Azure OpenAI endpoint and model
+- Processing parameters (workers, timeout)
+- File paths and logging configuration
 
-### 3. 執行程式
+### 3. Run the System
 
 ```powershell
 python main.py
 ```
 
-## 📝 配置說明
+## Configuration Guide
 
-### config.yaml 主要配置項
+```yaml
+# Database Configuration
+database:
+  host: "your-database-host"
+  port: "5211"
+  service_name: "YOUR_SERVICE"
+  oracle_client_path: "./instantclient_23_9"
 
-- **database**: 資料庫連線設定
-- **azure_openai**: Azure OpenAI API 設定
-- **news**: 新聞處理參數
-  - `num_workers`: 並行處理的線程數（預設 8）
-  - `timeout`: 單個請求超時時間（預設 60 秒）
-  - `excluded_keywords`: 要排除的關鍵字
-  - `included_types`: 要包含的新聞類型
+# Azure OpenAI Configuration
+azure_openai:
+  api_version: "2024-12-01-preview"
+  endpoint: "https://your-endpoint.openai.azure.com/"
+  model: "gpt-4o"
+  max_tokens: 5000
+  temperature: 0.1
 
-## 🔧 功能特色
+# News Processing Configuration
+news:
+  num_workers: 8    # Number of parallel processing threads
+  timeout: 60       # Request timeout in seconds
 
-- ✅ **自動化處理**: 每日自動擷取 T-1 日新聞資料
-- ✅ **智能標籤**: 使用 GPT-4o 提取股票標的
-- ✅ **自動摘要**: 生成 100-150 字新聞摘要
-- ✅ **並行處理**: 多線程加速處理效率
-- ✅ **錯誤重試**: 自動重試失敗的資料
-- ✅ **日誌記錄**: 完整的執行日誌
+# Path Configuration
+paths:
+  data_dir: "./data"
+  logs_dir: "./logs"
 
-## 📊 輸出格式
-
-輸出檔案位於 `data/` 目錄，格式為 `嘉實新聞資料_YYYYMMDD.csv`
-
-欄位說明：
-- `snap_yyyymm`: 新聞日期
-- `news`: 新聞內容
-- `related_product`: 相關產品代碼
-- `stock_desc`: 股票標的（格式：公司名(代碼)）
-- `news_summary`: 新聞摘要
-
-## 🛠️ 開發說明
-
-### 擴展新功能
-
-如需處理投顧報告，可以參考 `news_service.py` 建立 `report_service.py`：
-
-```python
-from src.report_service import ReportService
-
-# 在 main.py 中使用
-report_service = ReportService(db_manager, llm_service, config)
-df_reports = report_service.process_daily_reports(date_bgn, date_end)
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  file_prefix: "aipro_news"
 ```
 
-### 自訂 Prompt
+## Output Format
 
-修改 `src/llm_service.py` 中的 `extract_stock_info()` 和 `summarize_news()` 方法。
+Output files are saved in `data/` directory with format: `嘉實新聞資料_YYYYMMDD.csv`
+
+**Column Descriptions:**
+- `snap_yyyymm`: News date (YYYYMMDD format)
+- `news`: Full news content
+- `related_product`: Related product codes
+- `stock_desc`: Extracted stock targets (Format: CompanyName(StockCode))
+- `news_summary`: Generated news summary (100-150 characters)
 
 
-## 📄 授權
+## Development Guide
 
-內部專案，僅供富邦內部使用。
+### Architecture Overview
+
+1. **main.py**: Orchestrates the entire workflow
+2. **database.py**: Handles Oracle database connections with CLOB processing
+3. **llm_service.py**: Wraps Azure OpenAI API calls with retry logic
+4. **news_service.py**: Manages parallel news processing and data transformation
+5. **utils.py**: Provides shared utilities (logging, config loading, date handling)
+
+### Customizing Prompts
+
+Edit prompt templates in `prompts/` directory:
+- `extract_stock_target.txt`: Modify stock extraction logic
+- `summarize_news.txt`: Adjust summarization style and length
+- `system_financial_tagger.txt`: Change system behavior and constraints
+
+### Customizing SQL Queries
+
+Edit SQL templates in `queries/` directory:
+- `fetch_news.txt`: Modify news data filtering and selection criteria
+
+
+## Logging
+
+Logs are stored in `logs/` directory with daily rotation:
+- Format: `aipro_news_YYYYMMDD.log`
+- Both console and file output
+- Configurable log level in `config.yaml`
+
+## License
+Internal project for Fubon use only.
+
+
 

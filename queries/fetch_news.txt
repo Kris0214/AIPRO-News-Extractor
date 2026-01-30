@@ -1,0 +1,15 @@
+SELECT NEWS_DATE,
+      CONTENT AS NEWS_CONTENT,
+      RELATED_PRODUCT
+FROM dm_s_view.cwmdnews
+WHERE NEWS_DATE between sysdate-2 AND sysdate-1
+ AND RELATED_PRODUCT NOT LIKE '%NO300011%'
+ AND RELATED_PRODUCT LIKE '%AS%'
+ AND SUBJECT NOT LIKE '%經濟日報%'
+ AND (
+       NEWS_TYPE LIKE '%科技脈動%'
+    OR NEWS_TYPE LIKE '%產業情報%'
+    OR NEWS_TYPE LIKE '%國際股市%'
+    OR NEWS_TYPE LIKE '%頭條新聞%'
+    OR NEWS_TYPE LIKE '%研究報告%'
+    )
