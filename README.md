@@ -95,7 +95,7 @@ news:
 
 # Path Configuration
 paths:
-  data_dir: "./data"
+  outputs_dir: "./outputs"
   logs_dir: "./logs"
 
 # Logging Configuration
@@ -149,6 +149,7 @@ Logs are stored in `logs/` directory with daily rotation:
 
 ## License
 Internal project for Fubon use only.
+
 
 
 
