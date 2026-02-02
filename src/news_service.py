@@ -9,6 +9,7 @@ from typing import List, Tuple, Dict, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 import sys
+import os
 
 # Import utility functions
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -270,7 +271,6 @@ class NewsService:
         Returns:
             Saved file path
         """
-        import os
         os.makedirs(output_dir, exist_ok=True)
         
         # Generate filename
@@ -282,3 +282,4 @@ class NewsService:
         logger.info(f"Data saved to: {filepath}")
         
         return filepath
+
