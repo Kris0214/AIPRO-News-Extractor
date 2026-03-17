@@ -149,7 +149,3 @@ Logs are stored in `logs/` directory with daily rotation:
 
 ## License
 Internal project for Fubon use only.
-
-
-
-
