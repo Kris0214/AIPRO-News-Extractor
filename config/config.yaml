@@ -5,7 +5,7 @@ database:
   host: "sndmp-scan.fbs100.campus"
   port: "5211"
   service_name: "SNDMP_USER_DS"
-  oracle_client_path: "D:\\Python\\AIPRO-News-Extractor\\instantclient_23_9"
+  oracle_client_path: "C:\\Users\\AI-Pro\\instantclient_23_7"
 
 # Azure OpenAI configuration
 azure_openai:
@@ -18,11 +18,22 @@ azure_openai:
 # news processing configuration
 news:
   num_workers: 8  # number of parallel processing threads
-  timeout: 60  # timeout for a single request (seconds)
+  timeout: 60     # timeout for a single request (seconds)
+
+# advisory reports processing configuration
+advisory_reports:
+  subject_keyword: '富邦投顧'  # keyword to filter relevant advisory reports
+  num_workers: 8              # number of parallel processing threads
+  timeout: 60                 # timeout for a single request (seconds)
+  max_tokens: 5000            # maximum tokens for LLM response
+  temperature: 0.5          # temperature setting for LLM
+  model: "gpt-4o"
+  API_URL : "https://default911b236911054da8ac47cd9e1a690d.42.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4003931028334c6f9d9fad6706cc3ab3/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Dd7Km3dOV4xInStzQwJYo4xn5KxT-OhxI3VkZQleChU"
 
 # path configuration
 paths:
-  outputs_dir: "./outputs"
+  input_dir: "./inputs"
+  outputs_dir: "./outputs/新聞資料"
   logs_dir: "./logs"
 
 # logging configuration
