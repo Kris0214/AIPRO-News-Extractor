@@ -37,7 +37,7 @@ class AdReportsLLMService:
             
         logger.info(f"Reports LLM service initialized, prompts dir: {self.prompts_dir}")
     
-    def extract_reports(self, reports_text: str) -> str:
+    def extract_reports(self, reports_text: str) -> dict:
         """
         Generate reports summary.
         
@@ -45,23 +45,26 @@ class AdReportsLLMService:
             reports_text: Reports text content
             
         Returns:
-            Reports summary (100-150 characters)
+            dict with keys: PROD_ABBR_NAME, PROD_CODE, HOLDING_SUGGEST, TARGET_PRICE,
+                            EPS_ESTIMATE, HOUSE_VIEW_MEMBER, HOUSE_VIEW_PUBLIC
         """
         system_content = load_prompt('system_prompt', self.prompts_dir)
         
         user_prompt_template = load_prompt('extract_reports', self.prompts_dir)
-        user_prompt = user_prompt_template.format(
-            reports_text=reports_text
-        )
+        user_prompt = user_prompt_template.replace('{report_text}', reports_text)
         
+        _default = {k: None for k in ['PROD_ABBR_NAME', 'PROD_CODE', 'HOLDING_SUGGEST',
+                                       'TARGET_PRICE', 'EPS_ESTIMATE', 'HOUSE_VIEW_MEMBER', 'HOUSE_VIEW_PUBLIC']}
         try:
             response = self.llm.call_with_json_schema(
                 system_content, 
                 user_prompt,
-                max_tokens=500,
+                max_tokens=2000,
                 temperature=1.0
             )
-            return response.get('報告摘要', '無')
+            if response is None:
+                return _default
+            return response
         except Exception as e:
             logger.warning(f"Reports summarization failed: {e}")
-            return "無"
+            return _default

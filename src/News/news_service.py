@@ -55,7 +55,6 @@ class NewsService:
         Returns:
             SQL query statement
         """
-        # 載入 SQL 模板
         query_template = load_prompt('fetch_news', self.queries_dir)
         query = query_template.format(
             date_bgn=date_bgn,
@@ -82,7 +81,7 @@ class NewsService:
         
         if len(df_raw) == 0:
             logger.warning("Query result is empty")
-            return pd.DataFrame(columns=['snap_yyyymm', 'news', 'related_product'])
+            return pd.DataFrame(columns=['NEWS_DATE', 'NEWS_CONTENT', 'RELATED_PRODUCT'])
         
         # Process news data format
         df_news = self._process_news_data(df_raw)
@@ -100,69 +99,53 @@ class NewsService:
         Returns:
             Processed DataFrame
         """
-        # 處理日期格式
         if 'NEWS_DATE' in df_raw.columns:
-            df_raw['snap_yyyymm'] = df_raw['NEWS_DATE'].apply(
-                lambda x: x.strftime("%Y%m%d") if x is not None else None
+            df_raw['SNAP_DATE'] = df_raw['NEWS_DATE'].apply(
+                lambda x: x.strftime("%Y/%m/%d") if x is not None else None
             )
-        
-        # 重新命名欄位
-        column_mapping = {
-            'NEWS_CONTENT': 'news',
-            'RELATED_PRODUCT': 'related_product'
-        }
-        df_raw = df_raw.rename(columns=column_mapping)
-        
-        # 選擇需要的欄位
-        required_columns = ['snap_yyyymm', 'news', 'related_product']
+            df_raw['SNAP_YYYYMM'] = df_raw['NEWS_DATE'].apply(
+                lambda x: x.strftime("%Y%m") if x is not None else None
+            )
+
+        required_columns = ['SNAP_DATE', 'SNAP_YYYYMM', 'NEWS_CONTENT', 'RELATED_PRODUCT']
         df_result = df_raw[required_columns].copy()
         
         return df_result
     
-    def _process_single_news(self, args: Tuple[int, str, str]) -> Tuple[int, str, str]:
+    def _process_single_news(self, args: Tuple[int, str]) -> Tuple[int, str, dict]:
         """
         Process single news article (for parallel processing).
         
         Args:
-            args: (idx, news_text, process_type)
+            args: (idx, news_text)
             
         Returns:
-            (idx, news_text, result)
+            (idx, news_text, result_dict)
         """
-        idx, news_text, process_type = args
-
+        idx, news_text = args
         
         try:
-            if process_type == 'stock':
-                result = self.llm.extract_stock_info(news_text)
-            elif process_type == 'summary':
-                result = self.llm.summarize_news(news_text)
-            else:
-                result = None
-            
+            result = self.llm.summarize_news(news_text)
             return idx, news_text, result
             
         except Exception as e:
-            logger.warning(f"Processing news {idx} failed ({process_type}): {e}")
+            logger.warning(f"Processing news {idx} failed: {e}")
             return idx, news_text, None
     
-    def process_news_parallel(self, news_series: pd.Series, process_type: str) -> pd.DataFrame:
+    def process_news_parallel(self, news_series: pd.Series) -> pd.DataFrame:
         """
-        Process news in parallel (extract stocks or generate summaries).
+        Process news in parallel (extract stock info, summary and labels in one call).
         
         Args:
             news_series: News text Series
-            process_type: Processing type ('stock' or 'summary')
             
         Returns:
-            DataFrame containing news and col_info
+            DataFrame containing news, PROD_ABBR_NAME, PROD_CODE, NEWS_SUMMARY, LABELS
         """
-        desc_text = "Extract stock targets" if process_type == 'stock' else "Generate news summaries"
-        logger.info(f"Starting {desc_text}, total {len(news_series)} articles")
+        logger.info(f"Starting news processing, total {len(news_series)} articles")
         
         # Prepare tasks
-        tasks = [(i, news_series.iloc[i], process_type) 
-                for i in range(len(news_series))]
+        tasks = [(i, news_series.iloc[i]) for i in range(len(news_series))]
         
         results = []
         
@@ -170,11 +153,11 @@ class NewsService:
             futures = {executor.submit(self._process_single_news, task): task[0] 
                       for task in tasks}
             
-            for future in tqdm(as_completed(futures), total=len(tasks), 
-                             desc=desc_text):
+            for future in tqdm(as_completed(futures), total=len(tasks),
+                             desc="Processing news"):
                 try:
-                    idx, news_text, col_info = future.result(timeout=self.timeout)
-                    results.append((idx, news_text, col_info))
+                    idx, news_text, result = future.result(timeout=self.timeout)
+                    results.append((idx, news_text, result))
                 except Exception as e:
                     logger.error(f"Task execution failed: {e}")
         
@@ -182,15 +165,12 @@ class NewsService:
         results.sort(key=lambda x: x[0])
         
         if results:
-            _, news_texts, col_infos = zip(*results)
-            df_result = pd.DataFrame({
-                "news": news_texts,
-                "col_info": col_infos
-            })
+            _, news_texts, result_dicts = zip(*results)
+            df_result = pd.DataFrame(result_dicts)
         else:
-            df_result = pd.DataFrame({"news": [], "col_info": []})
+            df_result = pd.DataFrame(columns=['PROD_ABBR_NAME', 'PROD_CODE', 'NEWS_SUMMARY', 'LABELS'])
         
-        logger.info(f"{desc_text} completed, successful {len(df_result)} articles")
+        logger.info(f"News processing completed, {len(df_result)} articles")
         return df_result
     
     def process_daily_news(self, date_bgn: str, date_end: str) -> pd.DataFrame:
@@ -212,52 +192,23 @@ class NewsService:
             logger.warning("No news data, ending processing")
             return pd.DataFrame()
         
-        # 2. Extract stock targets
-        df_stocks = self.process_news_parallel(df_news['news'], 'stock')
+        # 2. Process all news (stock info + summary + labels in one call)
+        df_processed = self.process_news_parallel(df_news['NEWS_CONTENT'])
         
-        # 3. Generate news summaries
-        df_summaries = self.process_news_parallel(df_news['news'], 'summary')
+        # 3. Assign results (index is aligned)
+        llm_cols = ['PROD_ABBR_NAME', 'PROD_CODE', 'NEWS_SUMMARY', 'LABELS']
+        df_result = df_news.reset_index(drop=True).copy()
+        df_result[llm_cols] = df_processed[llm_cols]
         
-        # 4. Merge results
-        df_result = df_news.copy()
-        df_result = df_result.merge(df_stocks, how='left', on='news')
-        df_result = df_result.merge(df_summaries, how='left', on='news', 
-                                   suffixes=('_stock', '_summary'))
+        # 4. Handle missing data (retry)
+        retry_mask = df_result['NEWS_SUMMARY'].isna()
+        if retry_mask.any():
+            logger.warning(f"Found {retry_mask.sum()} incomplete records, starting retry")
+            df_retry_processed = self.process_news_parallel(df_result.loc[retry_mask, 'NEWS_CONTENT'])
+            df_result.loc[retry_mask, llm_cols] = df_retry_processed[llm_cols].values
         
-        df_result.columns = ['snap_yyyymm', 'news', 'related_product', 
-                            'stock_desc', 'news_summary']
-        
-        # 5. Handle missing data (retry)
-        df_untag = df_result[
-            (df_result['stock_desc'].isna()) | 
-            (df_result['news_summary'].isna())
-        ]
-        
-        if len(df_untag) > 0:
-            logger.warning(f"Found {len(df_untag)} incomplete records, starting retry")
-            
-            df_retry_stocks = self.process_news_parallel(df_untag['news'], 'stock')
-            df_retry_summaries = self.process_news_parallel(df_untag['news'], 'summary')
-            
-            df_retry = df_untag[['snap_yyyymm', 'news', 'related_product']].copy()
-            df_retry = df_retry.merge(df_retry_stocks, how='left', on='news')
-            df_retry = df_retry.merge(df_retry_summaries, how='left', on='news',
-                                     suffixes=('_stock', '_summary'))
-            df_retry.columns = ['snap_yyyymm', 'news', 'related_product',
-                               'stock_desc', 'news_summary']
-            
-            # Update results (remove incomplete, add retry successes)
-            df_result = df_result[
-                (df_result['stock_desc'].notna()) & 
-                (df_result['news_summary'].notna())
-            ]
-            df_result = pd.concat([df_result, df_retry], ignore_index=True)
-        
-        # 6. Final filter (keep valid data only)
-        df_final = df_result[
-            (df_result['stock_desc'].notna()) & 
-            (df_result['news_summary'].notna())
-        ]
+        # 5. Final filter (keep valid data only)
+        df_final = df_result[df_result['NEWS_SUMMARY'].notna()]
         
         logger.info(f"Processing completed, final valid data: {len(df_final)} articles")
 

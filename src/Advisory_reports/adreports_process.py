@@ -106,22 +106,20 @@ class AdReports_process:
             results = json.loads(response.choices[0].message.content)
 
             return idx, report_text, {
-                f"col_{key}": results.get(key, "無")
+                key: results.get(key, "無")
                 for key in [
-                    '股票標的', '股票標的代碼', '評等', '目標價格', 
-                    '獲利預估', '完整版公司營運近況與展望', 
-                    '大眾版公司營運近況與展望', '個股潛在風險'
+                    'PROD_ABBR_NAME', 'PROD_CODE', 'HOLDING_SUGGEST', 'TARGET_PRICE',
+                    'EPS_ESTIMATE', 'HOUSE_VIEW_MEMBER', 'HOUSE_VIEW_PUBLIC'
                 ]
             }
 
         except Exception as e:
             logger.warning(f"處理第 {idx} 筆報告失敗: {str(e)}")
             return idx, report_text, {
-                f"col_{key}": "無"
+                key: "無"
                 for key in [
-                    '股票標的', '股票標的代碼', '評等', '目標價格',
-                    '獲利預估', '完整版公司營運近況與展望',
-                    '大眾版公司營運近況與展望', '個股潛在風險'
+                    'PROD_ABBR_NAME', 'PROD_CODE', 'HOLDING_SUGGEST', 'TARGET_PRICE',
+                    'EPS_ESTIMATE', 'HOUSE_VIEW_MEMBER', 'HOUSE_VIEW_PUBLIC'
                 ]
             }
     
@@ -176,7 +174,6 @@ class AdReports_process:
         logger.info(f"PowerAutomate flow response: {response.status_code}, {response.text}")
 
         # 1. load advisory reports from files (use yesterday)
-        yesterday = (date.today() - timedelta(days=1)).strftime('%Y%m%d')
         today = date.today().strftime('%Y%m%d')
         reports_texts = self._extract_text_from_docx(
             str(Path(__file__).parent.parent.parent / "data" / "Fubon Research" / today),
@@ -193,16 +190,12 @@ class AdReports_process:
                                     , client = self.client
                                 )
         
-        reports_summaries['snap_yyyymm'] = date_end.replace('/', '')[:6]
-        reports_summaries['stock_desc'] = reports_summaries['col_股票標的'] + '('+ reports_summaries['col_股票標的代碼'] + ')'
+        reports_summaries['SNAP_DATE'] = date_end
+        reports_summaries['SNAP_YYYYMM'] = date_end.replace('/', '')[:6]
         
-        df_result = reports_summaries[['snap_yyyymm', 'stock_desc', 
-                                       'col_大眾版公司營運近況與展望', 'col_完整版公司營運近況與展望', 
-                                       'col_目標價格', 'col_評等', 'col_獲利預估']]
-        
-        df_result.columns = ['snap_yyyymm', 'stock_desc'
-                             , 'prospect_for_public', 'prospect_for_member'
-                             , 'target_price', 'holding_suggest', 'eps_estimate']
+        df_result = reports_summaries[['SNAP_DATE', 'SNAP_YYYYMM', 'PROD_ABBR_NAME', 'PROD_CODE',
+                                       'HOUSE_VIEW_PUBLIC', 'HOUSE_VIEW_MEMBER',
+                                       'TARGET_PRICE', 'HOLDING_SUGGEST', 'EPS_ESTIMATE']]
         
         logger.info(f"Processing completed, final valid data: {len(df_result)} articles")
         return df_result
@@ -223,13 +216,10 @@ class AdReports_process:
         """
         os.makedirs(output_dir, exist_ok=True)
         
-        df_houseview_report_blank = pd.read_csv(str(Path(__file__).parent.parent.parent / "outputs" / "投顧報告資料規格.csv"))
-        df_adreports = pd.concat([df_houseview_report_blank, df_adreports], ignore_index=True)
         # Generate filename
         filename = f"投顧報告摘要_{date_end.replace('/', '')}.csv"
-        filepath = os.path.join(output_dir, '投顧報告', filename)
+        filepath = os.path.join(output_dir, filename)
         
-        print(filepath)
         # Save
         df_adreports.to_csv(filepath, index=False, encoding='utf-8-sig')
         logger.info(f"Data saved to: {filepath}")

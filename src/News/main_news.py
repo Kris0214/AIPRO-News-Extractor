@@ -83,7 +83,7 @@ def main():
             news_service.save_news_data(
                 df_news=df_news,
                 date_end=date_end,
-                output_dir=config['paths']['outputs_dir']
+                output_dir=config['paths']['news_outputs_dir']
             )    
         else:
             logger.warning("No valid news data")

@@ -31,7 +31,7 @@ def main():
         start_time = datetime.now()
 
         # 3. Ensure required directories exist
-        os.makedirs(config['paths']['outputs_dir'], exist_ok=True)
+        os.makedirs(config['paths']['reports_outputs_dir'], exist_ok=True)
         os.makedirs(config['paths']['logs_dir'], exist_ok=True)
         
         # 4. Get date range
@@ -64,7 +64,7 @@ def main():
         # 7. Initialize advisory reports LLM service (specific)  # ← 新增
         logger.info("Initializing Advisory Reports LLM service...")
         advisory_reports_llm_service = AdReportsLLMService(llm_service)
-# ------------------------------------------------------------------------------------------------------------------------------------
+
         # 7. Initialize advisory reports service
         advisory_reports_service = AdReports_process(
             db_manager=db_manager,
@@ -78,13 +78,13 @@ def main():
             date_bgn=date_bgn,
             date_end=date_end,
         )
-# ------------------------------------------------------------------------------------------------------------------------------------
+
         # 9. Save results
         if len(df_advisory_reports) > 0:
             advisory_reports_service.save_adreports_data(
                 df_adreports = df_advisory_reports,
                 date_end = date_end,
-                output_dir = config['paths']['outputs_dir']
+                output_dir = config['paths']['reports_outputs_dir']
             )    
         else:
             logger.warning("No valid advisory reports data")

@@ -35,60 +35,34 @@ class NewsLLMService:
             self.prompts_dir = prompts_dir
             
         logger.info(f"News LLM service initialized, prompts dir: {self.prompts_dir}")
-    
-    def extract_stock_info(self, news_text: str) -> str:
-        """
-        Extract the stock information from news text.
 
-        Args:
-            news_text: news text content
-            
-        Returns:
-            symbol (format: company name(code))
+
+    def summarize_news(self, news_text: str) -> dict:
         """
-        system_content = load_prompt('system_financial_tagger', self.prompts_dir)
-        json_schema = '{"股票標的": "string"}'
-        
-        user_prompt_template = load_prompt('extract_stock_target', self.prompts_dir)
-        user_prompt = user_prompt_template.format(
-            json_schema=json_schema,
-            news_text=news_text
-        )
-        
-        try:
-            response = self.llm.call_with_json_schema(system_content, user_prompt)
-            return response.get('股票標的', '無')
-        except Exception as e:
-            logger.warning(f"股票標的提取失敗: {e}")
-            return "無"
-    
-    def summarize_news(self, news_text: str) -> str:
-        """
-        Generate news summary.
+        Extract stock info, generate news summary, and produce labels.
         
         Args:
             news_text: News text content
             
         Returns:
-            News summary (100-150 characters)
+            dict with keys: PROD_ABBR_NAME, PROD_CODE, NEWS_SUMMARY, LABELS
         """
         system_content = load_prompt('system_financial_tagger', self.prompts_dir)
-        json_schema = '{"新聞摘要": "string"}'
+        json_schema = '{"PROD_ABBR_NAME": "string", "PROD_CODE":"string", "NEWS_SUMMARY":"string","LABELS":"array"}'
         
         user_prompt_template = load_prompt('summarize_news', self.prompts_dir)
-        user_prompt = user_prompt_template.format(
-            json_schema=json_schema,
-            news_text=news_text
-        )
+        user_prompt = user_prompt_template.replace('{json_schema}', json_schema).replace('{news_text}', news_text)
         
         try:
             response = self.llm.call_with_json_schema(
                 system_content, 
                 user_prompt,
-                max_tokens=500,
+                max_tokens=2000,
                 temperature=1.0
             )
-            return response.get('新聞摘要', '無')
+            if response is None:
+                return {"PROD_ABBR_NAME": None, "PROD_CODE": None, "NEWS_SUMMARY": None, "LABELS": None}
+            return response
         except Exception as e:
             logger.warning(f"News summarization failed: {e}")
-            return "無"
+            return {"PROD_ABBR_NAME": None, "PROD_CODE": None, "NEWS_SUMMARY": None, "LABELS": None}
